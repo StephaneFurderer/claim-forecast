@@ -22,11 +22,11 @@ from frequency_development.core import load_data
 from claim_count_forecast.core import analyze_claims_forecast,plot_best_frequency
 
 # Load paths from configuration
-ROOT_FREQUENCY = str(config.FREQUENCY_RESULTS_PATH) + "\\"
-ROOT_POLICY_FORECAST = str(config.POLICY_RESULTS_PATH) + "\\"
-ROOT_CLAIM_FORECAST = str(config.CLAIM_RESULTS_PATH) + "\\"
+ROOT_FREQUENCY = str(config.get_frequency_results_path()) + "\\"
+ROOT_POLICY_FORECAST = str(config.get_policy_results_path()) + "\\"
+ROOT_CLAIM_FORECAST = str(config.get_claim_results_path()) + "\\"
 
-config_path = str(config.CONFIG_LAG_PATH)
+config_path = str(config.get_config_path('lag'))
 
 INPUT_BACKUP_MODE_CSA = str(config.BACKUP_MODE_CSA_PATH) + "\\"
 INPUT_BACKUP_MODE_TM = str(config.BACKUP_MODE_TM_PATH) + "\\"

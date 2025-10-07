@@ -81,11 +81,11 @@ st.set_page_config(layout="wide")
 INPUT_BACKUP_MODE_CSA = str(config.BACKUP_MODE_CSA_PATH) + "\\"
 INPUT_BACKUP_MODE_TM = str(config.BACKUP_MODE_TM_PATH) + "\\"
 
-config_path = str(config.CONFIG_FREQ_PATH)
-result_path = str(config.FREQUENCY_RESULTS_PATH) + "\\"
+config_path = str(config.get_config_path('freq'))
+result_path = str(config.get_frequency_results_path()) + "\\"
 
 ROOT_OUTPUT_POL_FORECAST = str(config.POLICY_FORECAST_PATH) + "\\"
-config_path_lag = str(config.CONFIG_LAG_PATH) 
+config_path_lag = str(config.get_config_path('lag')) 
 
 
 def load_data(cutoff_date:str):

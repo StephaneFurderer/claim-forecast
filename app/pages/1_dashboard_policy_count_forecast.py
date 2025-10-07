@@ -25,9 +25,9 @@ from policy_count_forecast.core import (
 st.set_page_config(layout="wide")
 
 # Load paths from configuration
-FINANCE_INPUT_FOLDER = str(config.POLICY_INPUT_FINANCE_PATH) + "\\"
-result_path = str(config.POLICY_RESULTS_PATH) + "\\"
-config_path = str(config.CONFIG_LAG_PATH)
+FINANCE_INPUT_FOLDER = str(config.get_finance_input_path()) + "\\"
+result_path = str(config.get_policy_results_path()) + "\\"
+config_path = str(config.get_config_path('lag'))
 
 INPUT_BACKUP_MODE_CSA = str(config.BACKUP_MODE_CSA_PATH) + "\\"
 INPUT_BACKUP_MODE_TM = str(config.BACKUP_MODE_TM_PATH) + "\\"
