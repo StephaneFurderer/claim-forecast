@@ -4,10 +4,13 @@ import plotly.graph_objects as go
 from datetime import datetime
 import json
 from pathlib import Path
+import os
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "helpers"))
 from config import config
+
+import frequency_development as fd
 
 st.set_page_config(page_title="Scenario Comparison", page_icon="🔄", layout="wide")
 
@@ -71,6 +74,66 @@ def load_claim_data(segment, cutoff, cutoff_finance, cutoff_frequency):
         (df['cutoff_frequency'] == cutoff_frequency)
     ].copy()
     return filtered if not filtered.empty else None
+
+@st.cache_data
+def load_raw_data_for_reported_freq(segment, cutoff):
+    """Load raw policies and claims data to compute reported frequency"""
+    # Construct backup paths
+    backup_csa_path = str(config.BACKUP_MODE_CSA_PATH) + "\\"
+    backup_tm_path = str(config.BACKUP_MODE_TM_PATH) + "\\"
+    
+    # Try CSA first, then TM
+    backup_paths = [(backup_csa_path, "CSA"), (backup_tm_path, "TM")]
+    
+    for backup_path, block_type in backup_paths:
+        # Check if cutoff date folder exists
+        date_folder = os.path.join(backup_path, cutoff)
+        if not os.path.exists(date_folder):
+            continue
+        
+        try:
+            # Load data using frequency_development's backup loader
+            policies_df, claims_df = fd.load_data_backup(cutoff, backup_root=backup_path)
+            
+            # Filter to segment
+            policies_seg = policies_df[policies_df['segment'] == segment].copy()
+            claims_seg = claims_df[claims_df['segment'] == segment].copy()
+            
+            if not policies_seg.empty and not claims_seg.empty:
+                return policies_seg, claims_seg
+        except Exception as e:
+            continue
+    
+    return None, None
+
+@st.cache_data
+def compute_reported_frequency(policies_df, claims_df, cutoff):
+    """Compute reported (current observed) frequency per departure cohort"""
+    if policies_df is None or claims_df is None:
+        return None
+    
+    # Filter data to before cutoff
+    cutoff_dt = pd.to_datetime(cutoff)
+    policies_df = policies_df[policies_df['dateDepart_EndOfMonth'] <= cutoff_dt]
+    claims_df = claims_df[claims_df['dateDepart_EndOfMonth'] <= cutoff_dt]
+    
+    # Group by departure month
+    policies_by_dep = policies_df.groupby('dateDepart_EndOfMonth')['policy_count'].sum().reset_index()
+    claims_by_dep = claims_df.groupby('dateDepart_EndOfMonth')['claim_count'].sum().reset_index()
+    
+    # Merge and calculate frequency
+    reported_freq = pd.merge(
+        policies_by_dep, 
+        claims_by_dep, 
+        on='dateDepart_EndOfMonth', 
+        how='left'
+    )
+    
+    reported_freq['claim_count'] = reported_freq['claim_count'].fillna(0)
+    reported_freq['reported_frequency'] = reported_freq['claim_count'] / reported_freq['policy_count']
+    reported_freq['reported_frequency'] = reported_freq['reported_frequency'].fillna(0)
+    
+    return reported_freq[['dateDepart_EndOfMonth', 'reported_frequency']]
 
 # Get available segments
 def get_available_segments():
@@ -222,7 +285,7 @@ if policy_a is not None and policy_b is not None:
     
     # Tabs for different comparisons
     st.markdown("---")
-    tab1, tab2, tab3 = st.tabs(["📈 Policy Count", "🎯 Frequency", "📊 Claim Count"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Policy Count", "🎯 Frequency (Ultimate)", "📊 Reported Frequency", "📋 Claim Count"])
     
     # Tab 1: Policy Count Comparison
     with tab1:
@@ -381,8 +444,187 @@ if policy_a is not None and policy_b is not None:
         else:
             st.warning("Frequency data not available for comparison.")
     
-    # Tab 3: Claim Count Comparison
+    # Tab 3: Reported Frequency Comparison
     with tab3:
+        st.subheader("Reported Frequency Comparison (Current Observed)")
+        st.caption("⚠️ Computing reported frequency from raw data - this may take a few seconds...")
+        
+        # Load raw data for both scenarios
+        policies_a_raw, claims_a_raw = load_raw_data_for_reported_freq(segment, scenario_a_config['cutoff'])
+        policies_b_raw, claims_b_raw = load_raw_data_for_reported_freq(segment, scenario_b_config['cutoff'])
+        
+        if policies_a_raw is not None and policies_b_raw is not None:
+            # Compute reported frequency
+            reported_freq_a = compute_reported_frequency(policies_a_raw, claims_a_raw, scenario_a_config['cutoff'])
+            reported_freq_b = compute_reported_frequency(policies_b_raw, claims_b_raw, scenario_b_config['cutoff'])
+            
+            if reported_freq_a is not None and reported_freq_b is not None:
+                # Filter to selected period
+                reported_a_plot = reported_freq_a[
+                    (reported_freq_a['dateDepart_EndOfMonth'] >= start_date) & 
+                    (reported_freq_a['dateDepart_EndOfMonth'] <= end_date)
+                ]
+                reported_b_plot = reported_freq_b[
+                    (reported_freq_b['dateDepart_EndOfMonth'] >= start_date) & 
+                    (reported_freq_b['dateDepart_EndOfMonth'] <= end_date)
+                ]
+                
+                if view_mode == "Overlay":
+                    # Overlay view
+                    fig = go.Figure()
+                    
+                    fig.add_trace(go.Scatter(
+                        x=reported_a_plot['dateDepart_EndOfMonth'],
+                        y=reported_a_plot['reported_frequency'],
+                        mode='lines',
+                        name=f'Scenario A: {scenario_a}',
+                        line=dict(color='#636EFA', width=2)
+                    ))
+                    
+                    fig.add_trace(go.Scatter(
+                        x=reported_b_plot['dateDepart_EndOfMonth'],
+                        y=reported_b_plot['reported_frequency'],
+                        mode='lines',
+                        name=f'Scenario B: {scenario_b}',
+                        line=dict(color='#EF553B', width=2)
+                    ))
+                    
+                    fig.update_layout(
+                        xaxis_title='Departure Date',
+                        yaxis_title='Reported Frequency (Observed)',
+                        hovermode='x unified',
+                        height=500,
+                        showlegend=True,
+                        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                else:
+                    # Side-by-side view
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        fig_a = go.Figure()
+                        fig_a.add_trace(go.Scatter(
+                            x=reported_a_plot['dateDepart_EndOfMonth'],
+                            y=reported_a_plot['reported_frequency'],
+                            mode='lines',
+                            name=f'Scenario A',
+                            line=dict(color='#636EFA', width=2)
+                        ))
+                        fig_a.update_layout(
+                            title=f'Scenario A: {scenario_a}',
+                            xaxis_title='Departure Date',
+                            yaxis_title='Reported Frequency',
+                            height=400
+                        )
+                        st.plotly_chart(fig_a, use_container_width=True)
+                    
+                    with col2:
+                        fig_b = go.Figure()
+                        fig_b.add_trace(go.Scatter(
+                            x=reported_b_plot['dateDepart_EndOfMonth'],
+                            y=reported_b_plot['reported_frequency'],
+                            mode='lines',
+                            name=f'Scenario B',
+                            line=dict(color='#EF553B', width=2)
+                        ))
+                        fig_b.update_layout(
+                            title=f'Scenario B: {scenario_b}',
+                            xaxis_title='Departure Date',
+                            yaxis_title='Reported Frequency',
+                            height=400
+                        )
+                        st.plotly_chart(fig_b, use_container_width=True)
+                
+                # Show comparison with ultimate frequency if available
+                if frequency_a is not None and frequency_b is not None:
+                    st.markdown("---")
+                    st.subheader("📊 Reported vs Ultimate Frequency")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**Scenario A**")
+                        # Merge reported and ultimate
+                        freq_comparison_a = pd.merge(
+                            reported_freq_a,
+                            frequency_a[['dateDepart_EndOfMonth', 'best_frequency']],
+                            on='dateDepart_EndOfMonth',
+                            how='inner'
+                        )
+                        freq_comparison_a = freq_comparison_a[
+                            (freq_comparison_a['dateDepart_EndOfMonth'] >= start_date) &
+                            (freq_comparison_a['dateDepart_EndOfMonth'] <= end_date)
+                        ]
+                        
+                        fig_comp_a = go.Figure()
+                        fig_comp_a.add_trace(go.Scatter(
+                            x=freq_comparison_a['dateDepart_EndOfMonth'],
+                            y=freq_comparison_a['reported_frequency'],
+                            mode='lines',
+                            name='Reported (Observed)',
+                            line=dict(color='#636EFA', width=2)
+                        ))
+                        fig_comp_a.add_trace(go.Scatter(
+                            x=freq_comparison_a['dateDepart_EndOfMonth'],
+                            y=freq_comparison_a['best_frequency'],
+                            mode='lines',
+                            name='Ultimate (Target)',
+                            line=dict(color='#00CC96', width=2, dash='dash')
+                        ))
+                        fig_comp_a.update_layout(
+                            title='Reported vs Ultimate',
+                            xaxis_title='Departure Date',
+                            yaxis_title='Frequency',
+                            height=400
+                        )
+                        st.plotly_chart(fig_comp_a, use_container_width=True)
+                    
+                    with col2:
+                        st.markdown("**Scenario B**")
+                        # Merge reported and ultimate
+                        freq_comparison_b = pd.merge(
+                            reported_freq_b,
+                            frequency_b[['dateDepart_EndOfMonth', 'best_frequency']],
+                            on='dateDepart_EndOfMonth',
+                            how='inner'
+                        )
+                        freq_comparison_b = freq_comparison_b[
+                            (freq_comparison_b['dateDepart_EndOfMonth'] >= start_date) &
+                            (freq_comparison_b['dateDepart_EndOfMonth'] <= end_date)
+                        ]
+                        
+                        fig_comp_b = go.Figure()
+                        fig_comp_b.add_trace(go.Scatter(
+                            x=freq_comparison_b['dateDepart_EndOfMonth'],
+                            y=freq_comparison_b['reported_frequency'],
+                            mode='lines',
+                            name='Reported (Observed)',
+                            line=dict(color='#EF553B', width=2)
+                        ))
+                        fig_comp_b.add_trace(go.Scatter(
+                            x=freq_comparison_b['dateDepart_EndOfMonth'],
+                            y=freq_comparison_b['best_frequency'],
+                            mode='lines',
+                            name='Ultimate (Target)',
+                            line=dict(color='#00CC96', width=2, dash='dash')
+                        ))
+                        fig_comp_b.update_layout(
+                            title='Reported vs Ultimate',
+                            xaxis_title='Departure Date',
+                            yaxis_title='Frequency',
+                            height=400
+                        )
+                        st.plotly_chart(fig_comp_b, use_container_width=True)
+            else:
+                st.error("Could not compute reported frequency. Please check data availability.")
+        else:
+            st.warning("⚠️ Raw data not available for reported frequency calculation. Make sure backup data exists for the selected cutoff dates.")
+    
+    # Tab 4: Claim Count Comparison
+    with tab4:
         st.subheader("Claim Count Forecast Comparison")
         
         if claim_a is not None and claim_b is not None:
