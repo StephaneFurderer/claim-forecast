@@ -9,6 +9,11 @@ import os
 import plotly.graph_objects as go
 from dateutil.relativedelta import relativedelta
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "helpers"))
+from config import config
+
 import frequency_development as fd
 from frequency_development.constants import *
 
@@ -16,24 +21,15 @@ from frequency_development.core import load_data
 
 from claim_count_forecast.core import analyze_claims_forecast,plot_best_frequency
 
-ROOT = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Tables\\analysis\\"
-#ROOT_FILES = r"C:\Users\sfurderer\OneDrive - Generali Global Assistance\Actuarial Analytics\1 Projects\UnifiedClaimCount\backup_app\\"
-#"C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\"
-ROOT_FILES = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\"
+# Load paths from configuration
+ROOT_FREQUENCY = str(config.FREQUENCY_RESULTS_PATH) + "\\"
+ROOT_POLICY_FORECAST = str(config.POLICY_RESULTS_PATH) + "\\"
+ROOT_CLAIM_FORECAST = str(config.CLAIM_RESULTS_PATH) + "\\"
 
-ROOT_FREQUENCY = ROOT_FILES + "frequency_forecast\\"
-ROOT_OUTPUT_POL_FORECAST = ROOT_FILES + "policy_count_forecast\\" 
+config_path = str(config.CONFIG_LAG_PATH)
 
-ROOT_POLICY_FORECAST = ROOT_FILES + "policy_count_forecast\\_results\\"
-ROOT_CLAIM_FORECAST = ROOT_FILES + "claim_count_forecast\\_results\\"
-
-config_path = ROOT_OUTPUT_POL_FORECAST + "config_lag.json"
-
-# for backup mode
-ROOT_BACKUP_MODE = ROOT_FILES + "_data\\"
-#"C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\_data\\"
-INPUT_BACKUP_MODE_CSA = ROOT_BACKUP_MODE + "csa\\"
-INPUT_BACKUP_MODE_TM = ROOT_BACKUP_MODE + "tripmate\\"
+INPUT_BACKUP_MODE_CSA = str(config.BACKUP_MODE_CSA_PATH) + "\\"
+INPUT_BACKUP_MODE_TM = str(config.BACKUP_MODE_TM_PATH) + "\\"
 
 result_path = ROOT_CLAIM_FORECAST
 

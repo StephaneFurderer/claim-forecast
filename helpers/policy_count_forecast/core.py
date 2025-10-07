@@ -3,11 +3,18 @@ import os
 import plotly.graph_objects as go
 from pandas.tseries.offsets import MonthEnd, MonthBegin
 from frequency_development import preprocess_data
+import sys
+from pathlib import Path
+
+# Load configuration
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import config
+
 # the goal is to create a forecat of future policy_count based on available information from (1) finance (2) extracted data
     
 # get data for Airbnb
+# Note: ROOT is a lakehouse path - not yet configurable via .env (kept for backward compatibility)
 ROOT = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Tables\\analysis\\"
-ROOT_OUTPUT = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\frequency_forecast\\" 
 CUTOFF_DATE = "2025-04-30"
 from frequency_development import constants as const
 # Use constants from the package

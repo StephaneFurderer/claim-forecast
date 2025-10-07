@@ -8,6 +8,11 @@ import os
 import plotly.graph_objects as go
 import shutil
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "helpers"))
+from config import config
+
 import frequency_development as fd
 from frequency_development.constants import *
 
@@ -19,23 +24,13 @@ from policy_count_forecast.core import (
 
 st.set_page_config(layout="wide")
 
-#ROOT = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Tables\\analysis\\"
-#ROOT_OUTPUT_POL_FORECAST = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\policy_count_forecast\\" 
-#ROOT_FILES = r"C:\Users\sfurderer\OneDrive - Generali Global Assistance\Actuarial Analytics\1 Projects\UnifiedClaimCount\backup_app\\"
+# Load paths from configuration
+FINANCE_INPUT_FOLDER = str(config.POLICY_INPUT_FINANCE_PATH) + "\\"
+result_path = str(config.POLICY_RESULTS_PATH) + "\\"
+config_path = str(config.CONFIG_LAG_PATH)
 
-
-ROOT_FILES = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\"
-
-ROOT_OUTPUT_POL_FORECAST = ROOT_FILES + "policy_count_forecast\\"
-FINANCE_INPUT_FOLDER = ROOT_OUTPUT_POL_FORECAST + "input_finance\\"
-result_path = ROOT_OUTPUT_POL_FORECAST + "_results\\"
-config_path = ROOT_OUTPUT_POL_FORECAST + "config_lag.json"
-
-ROOT_BACKUP_MODE = ROOT_FILES + "_data\\"
-INPUT_BACKUP_MODE_CSA = ROOT_BACKUP_MODE + "csa\\"
-INPUT_BACKUP_MODE_TM = ROOT_BACKUP_MODE + "tripmate\\"
-
-ROOT_OUTPUT_FREQUENCY = ROOT_FILES + "frequency_forecast\\"
+INPUT_BACKUP_MODE_CSA = str(config.BACKUP_MODE_CSA_PATH) + "\\"
+INPUT_BACKUP_MODE_TM = str(config.BACKUP_MODE_TM_PATH) + "\\"
 
 #ROOT_OUTPUT_FREQUENCY = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\frequency_forecast\\" 
 # ROOT_OUTPUT_FREQUENCY = r"C:\Users\sfurderer\OneDrive - Generali Global Assistance\Actuarial Analytics\1 Projects\UnifiedClaimCount\backup_app\\frequency_forecast\\"

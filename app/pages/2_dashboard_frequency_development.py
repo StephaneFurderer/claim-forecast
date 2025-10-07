@@ -11,6 +11,11 @@ import os
 import shutil
 import tempfile
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "helpers"))
+from config import config
+
 # import from the installed package
 import frequency_development as fd
 from frequency_development import constants as const
@@ -72,35 +77,24 @@ DATE_RECEIVED_END_OF_MONTH = const.DATE_RECEIVED_END_OF_MONTH
 
 st.set_page_config(layout="wide")
 
-ROOT = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Tables\\analysis\\"
+# Load paths from configuration
+INPUT_BACKUP_MODE_CSA = str(config.BACKUP_MODE_CSA_PATH) + "\\"
+INPUT_BACKUP_MODE_TM = str(config.BACKUP_MODE_TM_PATH) + "\\"
 
-#ROOT_FILES = r"C:\Users\sfurderer\OneDrive - Generali Global Assistance\Actuarial Analytics\1 Projects\UnifiedClaimCount\backup_app\\"
-ROOT_FILES = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\"
+config_path = str(config.CONFIG_FREQ_PATH)
+result_path = str(config.FREQUENCY_RESULTS_PATH) + "\\"
 
-ROOT_OUTPUT_POL_FORECAST = ROOT_FILES + "policy_count_forecast\\"
-FINANCE_INPUT_FOLDER = ROOT_OUTPUT_POL_FORECAST + "input_finance\\"
-#result_path = ROOT_OUTPUT_POL_FORECAST + "_results\\"
-
-ROOT_BACKUP_MODE = ROOT_FILES + "_data\\"
-INPUT_BACKUP_MODE_CSA = ROOT_BACKUP_MODE + "csa\\"
-INPUT_BACKUP_MODE_TM = ROOT_BACKUP_MODE + "tripmate\\"
-
-#ROOT_2 = r"C:\Users\sfurderer\OneDrive - Generali Global Assistance\Actuarial Analytics\1 Projects\UnifiedClaimCount\backup_app\\"
-ROOT_OUTPUT = ROOT_FILES + "frequency_forecast\\" 
-config_path = ROOT_OUTPUT + "config_freq.json"
-result_path = ROOT_OUTPUT 
-
-# INPUT_BACKUP_MODE_CSA = ROOT_BACKUP_MODE + "csa\\"
-# INPUT_BACKUP_MODE_TM = ROOT_BACKUP_MODE + "tripmate\\"
-
-#ROOT_OUTPUT_POL_FORECAST = ROOT_2 + "policy_count_forecast\\" #"C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Files\\policy_count_forecast\\" 
-config_path_lag = ROOT_OUTPUT_POL_FORECAST + "config_lag.json"
+ROOT_OUTPUT_POL_FORECAST = str(config.POLICY_FORECAST_PATH) + "\\"
+config_path_lag = str(config.CONFIG_LAG_PATH) 
 
 
 def load_data(cutoff_date:str):
     """
     Load data from Microsoft Fabric pipeline (via file directory)
+    Note: This function loads from a lakehouse source. Path not yet configurable via .env.
     """
+    # TODO: Make ROOT path configurable if needed
+    ROOT = "C:\\Users\\sfurderer\\OneLake - Microsoft\\USTI-ACTUARIAL-DEV\\USTI_IDEA_SILVER.Lakehouse\\Tables\\analysis\\"
     cutoff_date_ = cutoff_date.replace("-","_")
     claims_file = ROOT + f"_clm_count_{cutoff_date_}"
     policies_file = ROOT + f"_pol_count_{cutoff_date_}"
