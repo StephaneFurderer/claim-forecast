@@ -20,7 +20,7 @@ class Config:
     """Configuration management for Claim Forecast"""
     
     # Data paths
-    DATA_ROOT: str = os.getenv('CLAIM_FORECAST_DATA_ROOT', './data')
+    #DATA_ROOT: str = os.getenv('CLAIM_FORECAST_DATA_ROOT', './data')
     BACKUP_ROOT: str = os.getenv('CLAIM_FORECAST_BACKUP_ROOT', './data/_data')
     
     # Backup mode paths
@@ -28,9 +28,9 @@ class Config:
     BACKUP_MODE_TM_PATH: str = os.getenv('BACKUP_MODE_TM_PATH', f'{BACKUP_ROOT}/tripmate')
     
     # Specific forecast paths (with defaults)
-    POLICY_FORECAST_PATH: str = os.getenv('POLICY_FORECAST_PATH', f'{DATA_ROOT}/policy_count_forecast')
-    FREQUENCY_FORECAST_PATH: str = os.getenv('FREQUENCY_FORECAST_PATH', f'{DATA_ROOT}/frequency_forecast')
-    CLAIM_FORECAST_PATH: str = os.getenv('CLAIM_FORECAST_PATH', f'{DATA_ROOT}/claim_count_forecast')
+    POLICY_FORECAST_PATH: str = os.getenv('POLICY_FORECAST_PATH', f'{BACKUP_ROOT}/policy_count_forecast')
+    FREQUENCY_FORECAST_PATH: str = os.getenv('FREQUENCY_FORECAST_PATH', f'{BACKUP_ROOT}/frequency_forecast')
+    CLAIM_FORECAST_PATH: str = os.getenv('CLAIM_FORECAST_PATH', f'{BACKUP_ROOT}/claim_count_forecast')
     
     # Application settings
     DEFAULT_BACKUP_MODE: bool = os.getenv('DEFAULT_BACKUP_MODE', 'false').lower() == 'true'
