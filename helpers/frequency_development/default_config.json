@@ -1,0 +1,35 @@
+{
+  "MrFlat__2025-03-01": {
+    "exclude_dates": [
+      "2022-01",
+      [
+        "2021-09",
+        "2021-12"
+      ]
+    ],
+    "min_max_development": 5,
+    "cutoff_date": "2025-03-01",
+    "min_max_dev": 5,
+    "min_date": "2020-01-02 00:00:00",
+    "max_date": "2025-03-31 00:00:00",
+    "manual_overrides": []
+  },
+  "MrWinter__2025-03-01": {
+    "exclude_dates": [],
+    "min_max_development": 0,
+    "cutoff_date": "2025-03-01",
+    "min_max_dev": 0,
+    "min_date": "2020-01-02 00:00:00",
+    "max_date": "2025-03-31 00:00:00",
+    "manual_overrides": []
+  },
+  "MrSummer__2025-03-01": {
+    "exclude_dates": [],
+    "min_max_development": 0,
+    "cutoff_date": "2025-03-01",
+    "min_max_dev": 0,
+    "min_date": "2020-01-02 00:00:00",
+    "max_date": "2025-03-31 00:00:00",
+    "manual_overrides": []
+  }
+}

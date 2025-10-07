@@ -1,0 +1,68 @@
+{
+    "F2 to F3 (2025)": {
+        "baseline" : {
+            "cutoff":"2025-06-30",
+            "cutoff_finance" : "2025-06-30",
+            "cutoff_frequency":"2025-06-30"
+        },
+        "current": {
+            "cutoff":"2025-09-30",
+            "cutoff_finance" : "2025-09-30",
+            "cutoff_frequency":"2025-09-30"
+        },
+        "aoc" : {
+            "cutoff":"2025-06-30",
+            "cutoff_finance" : "2025-06-30",
+            "cutoff_frequency":"2025-09-30"
+        }
+    },"F2 to July (2025)": {
+        "baseline" : {
+            "cutoff":"2025-06-30",
+            "cutoff_finance" : "2025-06-30",
+            "cutoff_frequency":"2025-06-30"
+        },
+        "current": {
+            "cutoff":"2025-07-31",
+            "cutoff_finance" : "2025-06-30",
+            "cutoff_frequency":"2025-07-31"
+        },
+        "aoc" : {
+            "cutoff":"2025-06-30",
+            "cutoff_finance" : "2025-06-30",
+            "cutoff_frequency":"2025-07-31"
+        }
+    },
+    "F1 to F2 (2025)": {
+        "baseline" : {
+            "cutoff":"2025-03-31",
+            "cutoff_finance" : "2025-03-31",
+            "cutoff_frequency":"2025-03-31"
+        },
+        "current": {
+            "cutoff":"2025-06-30",
+            "cutoff_finance" : "2025-06-30",
+            "cutoff_frequency":"2025-06-30"
+        },
+        "aoc" : {
+            "cutoff":"2025-03-31",
+            "cutoff_finance" : "2025-03-31",
+            "cutoff_frequency":"2025-06-30"
+        }
+    },"F1 to May (2025)": {
+        "baseline" : {
+            "cutoff":"2025-03-31",
+            "cutoff_finance" : "2025-03-31",
+            "cutoff_frequency":"2025-03-31"
+        },
+        "current": {
+            "cutoff":"2025-05-31",
+            "cutoff_finance" : "2025-03-31",
+            "cutoff_frequency":"2025-05-31"
+        },
+        "aoc" : {
+            "cutoff":"2025-03-31",
+            "cutoff_finance" : "2025-03-31",
+            "cutoff_frequency":"2025-05-31"
+        }
+    }
+}
