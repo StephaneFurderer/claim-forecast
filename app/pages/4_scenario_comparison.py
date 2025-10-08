@@ -1068,13 +1068,13 @@ if policy_a is not None and policy_b is not None:
                 ))
                 
                 fig_waterfall_1.update_layout(
-                    title="Claims Variance: Baseline Forecast → Current Actual",
+                    title=f"Claims Variance: Baseline Forecast → Current Actual (Segment: {segment})",
                     yaxis_title="Claim Count",
                     showlegend=False,
                     height=400
                 )
                 
-                st.plotly_chart(fig_waterfall_1, use_container_width=True)
+                st.plotly_chart(fig_waterfall_1, use_container_width=True, key=f"waterfall_1_{segment}")
                 
                 # Metrics for Part 1
                 col1, col2, col3, col4 = st.columns(4)
@@ -1116,13 +1116,13 @@ if policy_a is not None and policy_b is not None:
                 ))
                 
                 fig_waterfall_2.update_layout(
-                    title="Remaining Claims Forecast Change",
+                    title=f"Remaining Claims Forecast Change (Segment: {segment})",
                     yaxis_title="Claim Count",
                     showlegend=False,
                     height=400
                 )
                 
-                st.plotly_chart(fig_waterfall_2, use_container_width=True)
+                st.plotly_chart(fig_waterfall_2, use_container_width=True, key=f"waterfall_2_{segment}")
                 
                 # Metrics for Part 2
                 col1, col2, col3, col4 = st.columns(4)
