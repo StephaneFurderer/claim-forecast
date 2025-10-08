@@ -1074,8 +1074,11 @@ if policy_a is not None and policy_b is not None:
                             'Segment',
                             'Part1_FreqImpact',
                             'Part1_VolImpact',
+                            'Part1_Total',
                             'Part2_FreqImpact',
-                            'Part2_VolImpact'
+                            'Part2_VolImpact',
+                            'Part2_Total',
+                            'Total_Change'
                         ]].set_index('Segment')
                         
                         # Sort by total impact
@@ -1086,7 +1089,15 @@ if policy_a is not None and policy_b is not None:
                         fig_heatmap = go.Figure(data=go.Heatmap(
                             z=heatmap_data.values.T,
                             x=heatmap_data.index,
-                            y=['Part 1: Freq Impact', 'Part 1: Vol Impact', 'Part 2: Freq Impact', 'Part 2: Vol Impact'],
+                            y=[
+                                'Part 1: Freq Impact', 
+                                'Part 1: Vol Impact', 
+                                'Part 1: Total',
+                                'Part 2: Freq Impact', 
+                                'Part 2: Vol Impact',
+                                'Part 2: Total',
+                                'Total Change'
+                            ],
                             colorscale='RdBu',
                             zmid=0,
                             text=heatmap_data.values.T,
@@ -1099,7 +1110,7 @@ if policy_a is not None and policy_b is not None:
                             title='AOC Impact Decomposition by Segment',
                             xaxis_title='Segment',
                             yaxis_title='Impact Type',
-                            height=400,
+                            height=550,
                             xaxis={'tickangle': -45}
                         )
                         
