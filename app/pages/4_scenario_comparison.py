@@ -991,7 +991,8 @@ if policy_a is not None and policy_b is not None:
         st.markdown("---")
         st.markdown("---")
         st.markdown("### 📊 Single Segment Detailed Analysis")
-        st.caption(f"Waterfall analysis for selected segment: **{segment}**")
+        st.info(f"🎯 **Currently analyzing segment:** `{segment}`")
+        st.caption(f"This section shows detailed waterfall charts for the selected segment. Change the segment in the sidebar to update these charts.")
         
         # Check if AOC scenario exists in the situation
         if 'aoc' not in scenarios[situation_a]:
@@ -1020,6 +1021,8 @@ if policy_a is not None and policy_b is not None:
             if claim_a is None or claim_b is None or claim_aoc is None:
                 st.error("⚠️ Missing claim forecast data. Please ensure baseline, current, and aoc scenarios have been forecasted.")
             else:
+                # Debug info
+                st.success(f"✅ Data loaded for segment: **{segment}** | Scenario A: {len(claim_a)} rows | Scenario B: {len(claim_b)} rows | AOC: {len(claim_aoc)} rows")
                 # Get cutoff dates
                 cutoff_a = pd.Timestamp(scenario_a_config['cutoff'])
                 cutoff_b = pd.Timestamp(scenario_b_config['cutoff'])
