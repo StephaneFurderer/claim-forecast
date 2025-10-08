@@ -809,12 +809,19 @@ if policy_a is not None and policy_b is not None:
                     
                     return styles
                 
+                # Convert frequencies to percentages for display
+                display_df['baseline_best_frequency'] = display_df['baseline_best_frequency'] * 100
+                display_df['current_reported'] = display_df['current_reported'] * 100
+                display_df['current_best_frequency'] = display_df['current_best_frequency'] * 100
+                display_df['difference_ultimate'] = display_df['difference_ultimate'] * 100
+                display_df['difference_reported_vs_baseline_ultimate'] = display_df['difference_reported_vs_baseline_ultimate'] * 100
+                
                 styled_df = display_df.style.apply(color_frequency, axis=1).format({
-                    'baseline_best_frequency': '{:.6f}',
-                    'current_reported': '{:.6f}',
-                    'current_best_frequency': '{:.6f}',
-                    'difference_ultimate': '{:+.6f}',
-                    'difference_reported_vs_baseline_ultimate': '{:+.6f}'
+                    'baseline_best_frequency': '{:.3f}%',
+                    'current_reported': '{:.3f}%',
+                    'current_best_frequency': '{:.3f}%',
+                    'difference_ultimate': '{:+.3f}%',
+                    'difference_reported_vs_baseline_ultimate': '{:+.3f}%'
                 })
                 
                 st.dataframe(styled_df, use_container_width=True, height=600)
@@ -829,11 +836,11 @@ if policy_a is not None and policy_b is not None:
                     current_manual_count = (comparison_df['current_source'] == 'manual').sum()
                     st.metric("Current Manual Overrides", current_manual_count)
                 with col3:
-                    avg_diff_ultimate = comparison_df['difference_ultimate'].mean()
-                    st.metric("Avg Δ Ultimate", f"{avg_diff_ultimate:+.6f}")
+                    avg_diff_ultimate = comparison_df['difference_ultimate'].mean() * 100
+                    st.metric("Avg Δ Ultimate", f"{avg_diff_ultimate:+.3f}%")
                 with col4:
-                    avg_gap = comparison_df['difference_reported_vs_baseline_ultimate'].mean()
-                    st.metric("Avg Gap (Reported vs Baseline)", f"{avg_gap:+.6f}")
+                    avg_gap = comparison_df['difference_reported_vs_baseline_ultimate'].mean() * 100
+                    st.metric("Avg Gap (Reported vs Baseline)", f"{avg_gap:+.3f}%")
             else:
                 st.warning(f"No frequency data found for segment '{segment}' with the selected cutoff dates.")
         else:
