@@ -712,7 +712,7 @@ if policy_a is not None and policy_b is not None:
         # Frequency Assumptions Comparison Table
         st.markdown("---")
         st.subheader("📋 Ultimate Frequency Assumptions by Scenario")
-        st.caption("Comparing frequency assumptions between baseline and current scenarios. Blue = Model, Red = Manual override, White = Actual reported data")
+        st.caption("Comparing frequency assumptions between baseline and current scenarios. Gray = Model, Amber = Manual override, White = Actual reported data")
         
         # Load best_frequencies.csv
         freq_path = config.get_frequency_results_path() / 'best_frequencies.csv'
@@ -791,21 +791,21 @@ if policy_a is not None and policy_b is not None:
                     
                     # Baseline source and frequency (columns 1, 2)
                     if row['baseline_source'] == 'model':
-                        styles[1] = 'background-color: #d4e6f1; color: black'
-                        styles[2] = 'background-color: #d4e6f1; color: black'
+                        styles[1] = 'background-color: #e8e8e8; color: black'  # Light Gray
+                        styles[2] = 'background-color: #e8e8e8; color: black'
                     elif row['baseline_source'] == 'manual':
-                        styles[1] = 'background-color: #f5b7b1; color: black'
-                        styles[2] = 'background-color: #f5b7b1; color: black'
+                        styles[1] = 'background-color: #fff3cd; color: black'  # Light Amber
+                        styles[2] = 'background-color: #fff3cd; color: black'
                     
                     # current_reported stays white (column 3 - no styling)
                     
                     # Current source and frequency (columns 4, 5)
                     if row['current_source'] == 'model':
-                        styles[4] = 'background-color: #d4e6f1; color: black'
-                        styles[5] = 'background-color: #d4e6f1; color: black'
+                        styles[4] = 'background-color: #e8e8e8; color: black'  # Light Gray
+                        styles[5] = 'background-color: #e8e8e8; color: black'
                     elif row['current_source'] == 'manual':
-                        styles[4] = 'background-color: #f5b7b1; color: black'
-                        styles[5] = 'background-color: #f5b7b1; color: black'
+                        styles[4] = 'background-color: #fff3cd; color: black'  # Light Amber
+                        styles[5] = 'background-color: #fff3cd; color: black'
                     
                     return styles
                 
