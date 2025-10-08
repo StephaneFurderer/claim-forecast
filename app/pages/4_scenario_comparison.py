@@ -712,7 +712,7 @@ if policy_a is not None and policy_b is not None:
         # Frequency Assumptions Comparison Table
         st.markdown("---")
         st.subheader("📋 Ultimate Frequency Assumptions by Scenario")
-        st.caption("Comparing frequency assumptions between baseline and current scenarios. Blue = Model, Red = Manual override")
+        st.caption("Comparing frequency assumptions between baseline and current scenarios. Blue = Model, Red = Manual override, White = Actual reported data")
         
         # Load best_frequencies.csv
         freq_path = config.get_frequency_results_path() / 'best_frequencies.csv'
@@ -737,20 +737,40 @@ if policy_a is not None and policy_b is not None:
             ][['segment', 'dateDepart_EndOfMonth', 'year', 'month', 'source', 'best_frequency']].copy()
             current_freq.columns = ['segment', 'dateDepart_EndOfMonth', 'year', 'month', 'current_source', 'current_best_frequency']
             
+            # Get reported frequency from cached computation (if available)
+            try:
+                current_reported = freq_comparison_b[['dateDepart_EndOfMonth', 'reported_frequency']].copy()
+                current_reported.columns = ['dateDepart_EndOfMonth', 'current_reported']
+            except (NameError, KeyError):
+                # If not available, create empty dataframe
+                current_reported = pd.DataFrame(columns=['dateDepart_EndOfMonth', 'current_reported'])
+            
             if not baseline_freq.empty and not current_freq.empty:
-                # Merge baseline and current
+                # Merge baseline, current ultimate, and current reported
                 comparison_df = baseline_freq.merge(
                     current_freq[['dateDepart_EndOfMonth', 'current_source', 'current_best_frequency']], 
                     on='dateDepart_EndOfMonth', 
                     how='outer'
-                ).sort_values('dateDepart_EndOfMonth')
+                )
+                
+                # Merge with current reported frequency
+                if not current_reported.empty:
+                    comparison_df = comparison_df.merge(
+                        current_reported,
+                        on='dateDepart_EndOfMonth',
+                        how='left'
+                    )
+                else:
+                    comparison_df['current_reported'] = None
+                
+                comparison_df = comparison_df.sort_values('dateDepart_EndOfMonth')
                 
                 # Fill NaN in segment column
                 comparison_df['segment'] = comparison_df['segment'].fillna(segment)
                 
-                # Calculate difference
-                comparison_df['difference'] = comparison_df['current_best_frequency'] - comparison_df['baseline_best_frequency']
-                comparison_df['difference_pct'] = (comparison_df['difference'] / comparison_df['baseline_best_frequency'] * 100).round(2)
+                # Calculate differences
+                comparison_df['difference_ultimate'] = comparison_df['current_best_frequency'] - comparison_df['baseline_best_frequency']
+                comparison_df['difference_reported_vs_baseline_ultimate'] = comparison_df['current_reported'] - comparison_df['baseline_best_frequency']
                 
                 # Format date for display
                 comparison_df['Year-Month'] = comparison_df['dateDepart_EndOfMonth'].dt.strftime('%Y-%m')
@@ -759,42 +779,42 @@ if policy_a is not None and policy_b is not None:
                 display_df = comparison_df[[
                     'Year-Month',
                     'baseline_source', 'baseline_best_frequency',
+                    'current_reported',
                     'current_source', 'current_best_frequency',
-                    'difference', 'difference_pct'
+                    'difference_ultimate',
+                    'difference_reported_vs_baseline_ultimate'
                 ]].copy()
                 
                 # Apply color styling
-                def color_source(val):
-                    if val == 'model':
-                        return 'background-color: #d4e6f1; color: black'  # Light blue
-                    elif val == 'manual':
-                        return 'background-color: #f5b7b1; color: black'  # Light red
-                    else:
-                        return ''
-                
                 def color_frequency(row):
                     styles = [''] * len(row)
+                    
+                    # Baseline source and frequency (columns 1, 2)
                     if row['baseline_source'] == 'model':
-                        styles[1] = 'background-color: #d4e6f1; color: black'  # baseline_source
-                        styles[2] = 'background-color: #d4e6f1; color: black'  # baseline_best_frequency
+                        styles[1] = 'background-color: #d4e6f1; color: black'
+                        styles[2] = 'background-color: #d4e6f1; color: black'
                     elif row['baseline_source'] == 'manual':
                         styles[1] = 'background-color: #f5b7b1; color: black'
                         styles[2] = 'background-color: #f5b7b1; color: black'
                     
+                    # current_reported stays white (column 3 - no styling)
+                    
+                    # Current source and frequency (columns 4, 5)
                     if row['current_source'] == 'model':
-                        styles[3] = 'background-color: #d4e6f1; color: black'  # current_source
-                        styles[4] = 'background-color: #d4e6f1; color: black'  # current_best_frequency
+                        styles[4] = 'background-color: #d4e6f1; color: black'
+                        styles[5] = 'background-color: #d4e6f1; color: black'
                     elif row['current_source'] == 'manual':
-                        styles[3] = 'background-color: #f5b7b1; color: black'
                         styles[4] = 'background-color: #f5b7b1; color: black'
+                        styles[5] = 'background-color: #f5b7b1; color: black'
                     
                     return styles
                 
                 styled_df = display_df.style.apply(color_frequency, axis=1).format({
                     'baseline_best_frequency': '{:.6f}',
+                    'current_reported': '{:.6f}',
                     'current_best_frequency': '{:.6f}',
-                    'difference': '{:+.6f}',
-                    'difference_pct': '{:+.2f}%'
+                    'difference_ultimate': '{:+.6f}',
+                    'difference_reported_vs_baseline_ultimate': '{:+.6f}'
                 })
                 
                 st.dataframe(styled_df, use_container_width=True, height=600)
@@ -809,11 +829,11 @@ if policy_a is not None and policy_b is not None:
                     current_manual_count = (comparison_df['current_source'] == 'manual').sum()
                     st.metric("Current Manual Overrides", current_manual_count)
                 with col3:
-                    avg_diff = comparison_df['difference'].mean()
-                    st.metric("Avg Difference", f"{avg_diff:+.6f}")
+                    avg_diff_ultimate = comparison_df['difference_ultimate'].mean()
+                    st.metric("Avg Δ Ultimate", f"{avg_diff_ultimate:+.6f}")
                 with col4:
-                    avg_diff_pct = comparison_df['difference_pct'].mean()
-                    st.metric("Avg % Change", f"{avg_diff_pct:+.2f}%")
+                    avg_gap = comparison_df['difference_reported_vs_baseline_ultimate'].mean()
+                    st.metric("Avg Gap (Reported vs Baseline)", f"{avg_gap:+.6f}")
             else:
                 st.warning(f"No frequency data found for segment '{segment}' with the selected cutoff dates.")
         else:
