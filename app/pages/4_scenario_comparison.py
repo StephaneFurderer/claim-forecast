@@ -1047,14 +1047,25 @@ if policy_a is not None and policy_b is not None:
                 total_a_in_period = claim_a_period['clmNum_unique_'].sum()
                 total_b_in_period = claim_b_period['clmNum_unique_'].sum()
                 
+                # Get the key metrics values from the top of the page
+                # These are calculated outside the tabs
+                key_metrics_claim_a = claim_a[(claim_a['dateReceived_EndOfMonth'] >= start_date) & (claim_a['dateReceived_EndOfMonth'] <= end_date)]['clmNum_unique_'].sum()
+                key_metrics_claim_b = claim_b[(claim_b['dateReceived_EndOfMonth'] >= start_date) & (claim_b['dateReceived_EndOfMonth'] <= end_date)]['clmNum_unique_'].sum()
+                
                 st.markdown("---")
                 st.info(f"""
-                **📊 Total Claims in Selected Period ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}):**
+                **📊 Waterfall Data for Segment: `{segment}`**
+                
+                **Total Claims in Selected Period ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}):**
                 - Scenario A (Baseline): {total_a_in_period:,.0f}
                 - Scenario B (Current): {total_b_in_period:,.0f}
                 - Change: {total_b_in_period - total_a_in_period:+,.0f}
                 
-                _(This should equal Part 1 Baseline + Part 2 Baseline for Scenario A)_
+                **Comparison with Key Metrics (at top of page):**
+                - Key Metrics Scenario A: {key_metrics_claim_a:,.0f} {'✅ MATCH' if abs(key_metrics_claim_a - total_a_in_period) < 0.01 else '⚠️ MISMATCH'}
+                - Key Metrics Scenario B: {key_metrics_claim_b:,.0f} {'✅ MATCH' if abs(key_metrics_claim_b - total_b_in_period) < 0.01 else '⚠️ MISMATCH'}
+                
+                _(Part 1 Baseline + Part 2 Baseline should equal {total_a_in_period:,.0f})_
                 """)
                 
                 # Split into two parts based on cutoff_B
