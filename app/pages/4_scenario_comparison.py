@@ -314,7 +314,7 @@ if policy_a is not None and policy_b is not None:
     
     # Tabs for different comparisons
     st.markdown("---")
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Policy Count", "🎯 Frequency (Ultimate)", "📊 Reported Frequency", "📋 Claim Count", "🔄 AOC Analysis"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📈 Policy Count", "🎯 Frequency (Ultimate)", "📊 Reported Frequency", "📋 Claim Count", "🔄 AOC Analysis", "🔥 AOC by Segment"])
     
     # Tab 1: Policy Count Comparison
     with tab1:
@@ -958,6 +958,189 @@ if policy_a is not None and policy_b is not None:
                 with col3:
                     st.metric("Total Volume Impact", f"{total_vol_impact:+,.0f}",
                              f"{(total_vol_impact/total_baseline*100):+.1f}%" if total_baseline > 0 else "N/A")
+    
+    # Tab 6: AOC by Segment (Multi-Segment Analysis)
+    with tab6:
+        st.subheader("🔥 Analysis of Change by Segment")
+        st.caption("Comparing AOC decomposition across all segments")
+        
+        # Check if AOC scenario exists
+        if 'aoc' not in scenarios[situation_a]:
+            st.warning(f"⚠️ No AOC scenario defined for '{situation_a}'. Please add an 'aoc' scenario to scenarios.json.")
+        else:
+            # Load scenario configs
+            scenario_aoc_config = scenarios[situation_a]['aoc']
+            cutoff_b = pd.Timestamp(scenario_b_config['cutoff'])
+            
+            # Get all available segments
+            all_segments = get_available_segments()
+            
+            if len(all_segments) == 0:
+                st.warning("No segments found in the data.")
+            else:
+                with st.spinner(f"Computing AOC for {len(all_segments)} segments..."):
+                    # Initialize results list
+                    aoc_results = []
+                    
+                    # Loop through all segments
+                    for seg in all_segments:
+                        try:
+                            # Load data for all 3 scenarios
+                            claim_a = load_claim_data(seg, scenario_a_config['cutoff'], scenario_a_config['cutoff_finance'], scenario_a_config['cutoff_frequency'])
+                            claim_aoc = load_claim_data(seg, scenario_aoc_config['cutoff'], scenario_aoc_config['cutoff_finance'], scenario_aoc_config['cutoff_frequency'])
+                            claim_b = load_claim_data(seg, scenario_b_config['cutoff'], scenario_b_config['cutoff_finance'], scenario_b_config['cutoff_frequency'])
+                            
+                            if claim_a is None or claim_aoc is None or claim_b is None:
+                                continue
+                            
+                            # Filter to selected period
+                            claim_a_period = claim_a[(claim_a['dateReceived_EndOfMonth'] >= start_date) & 
+                                                      (claim_a['dateReceived_EndOfMonth'] <= end_date)]
+                            claim_aoc_period = claim_aoc[(claim_aoc['dateReceived_EndOfMonth'] >= start_date) & 
+                                                          (claim_aoc['dateReceived_EndOfMonth'] <= end_date)]
+                            claim_b_period = claim_b[(claim_b['dateReceived_EndOfMonth'] >= start_date) & 
+                                                      (claim_b['dateReceived_EndOfMonth'] <= end_date)]
+                            
+                            # Part 1: Actual vs Forecast (≤ cutoff_B)
+                            baseline_actual = claim_a_period[claim_a_period['dateReceived_EndOfMonth'] <= cutoff_b]['clmNum_unique_'].sum()
+                            aoc_actual = claim_aoc_period[claim_aoc_period['dateReceived_EndOfMonth'] <= cutoff_b]['clmNum_unique_'].sum()
+                            current_actual = claim_b_period[claim_b_period['dateReceived_EndOfMonth'] <= cutoff_b]['clmNum_unique_'].sum()
+                            
+                            freq_impact_p1 = aoc_actual - baseline_actual
+                            vol_impact_p1 = current_actual - aoc_actual
+                            total_impact_p1 = current_actual - baseline_actual
+                            
+                            # Part 2: Forecast vs Forecast (> cutoff_B)
+                            baseline_forecast = claim_a_period[claim_a_period['dateReceived_EndOfMonth'] > cutoff_b]['clmNum_unique_'].sum()
+                            aoc_forecast = claim_aoc_period[claim_aoc_period['dateReceived_EndOfMonth'] > cutoff_b]['clmNum_unique_'].sum()
+                            current_forecast = claim_b_period[claim_b_period['dateReceived_EndOfMonth'] > cutoff_b]['clmNum_unique_'].sum()
+                            
+                            freq_impact_p2 = aoc_forecast - baseline_forecast
+                            vol_impact_p2 = current_forecast - aoc_forecast
+                            total_impact_p2 = current_forecast - baseline_forecast
+                            
+                            # Total impacts
+                            total_baseline = baseline_actual + baseline_forecast
+                            total_current = current_actual + current_forecast
+                            total_freq = freq_impact_p1 + freq_impact_p2
+                            total_vol = vol_impact_p1 + vol_impact_p2
+                            total_change = total_current - total_baseline
+                            total_change_pct = (total_change / total_baseline * 100) if total_baseline > 0 else 0
+                            
+                            # Store results
+                            aoc_results.append({
+                                'Segment': seg,
+                                'Part1_Baseline': baseline_actual,
+                                'Part1_FreqImpact': freq_impact_p1,
+                                'Part1_VolImpact': vol_impact_p1,
+                                'Part1_Total': total_impact_p1,
+                                'Part2_Baseline': baseline_forecast,
+                                'Part2_FreqImpact': freq_impact_p2,
+                                'Part2_VolImpact': vol_impact_p2,
+                                'Part2_Total': total_impact_p2,
+                                'Total_Baseline': total_baseline,
+                                'Total_Current': total_current,
+                                'Total_FreqImpact': total_freq,
+                                'Total_VolImpact': total_vol,
+                                'Total_Change': total_change,
+                                'Total_Change_Pct': total_change_pct
+                            })
+                        
+                        except Exception as e:
+                            st.warning(f"Could not compute AOC for segment '{seg}': {str(e)}")
+                            continue
+                    
+                    if len(aoc_results) == 0:
+                        st.warning("No valid AOC results computed. Please check your data.")
+                    else:
+                        # Create DataFrame
+                        df_aoc = pd.DataFrame(aoc_results)
+                        
+                        st.success(f"✅ Successfully computed AOC for {len(df_aoc)} segments")
+                        
+                        # Download button
+                        csv = df_aoc.to_csv(index=False)
+                        st.download_button(
+                            label="📥 Download AOC Results (CSV)",
+                            data=csv,
+                            file_name=f"aoc_by_segment_{situation_a}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv",
+                            mime="text/csv"
+                        )
+                        
+                        st.markdown("---")
+                        
+                        # Create heatmap data for visualization
+                        heatmap_data = df_aoc[[
+                            'Segment',
+                            'Part1_FreqImpact',
+                            'Part1_VolImpact',
+                            'Part2_FreqImpact',
+                            'Part2_VolImpact'
+                        ]].set_index('Segment')
+                        
+                        # Sort by total impact
+                        df_aoc_sorted = df_aoc.sort_values('Total_Change', ascending=False)
+                        heatmap_data = heatmap_data.reindex(df_aoc_sorted['Segment'])
+                        
+                        # Create heatmap
+                        fig_heatmap = go.Figure(data=go.Heatmap(
+                            z=heatmap_data.values.T,
+                            x=heatmap_data.index,
+                            y=['Part 1: Freq Impact', 'Part 1: Vol Impact', 'Part 2: Freq Impact', 'Part 2: Vol Impact'],
+                            colorscale='RdBu',
+                            zmid=0,
+                            text=heatmap_data.values.T,
+                            texttemplate='%{text:.0f}',
+                            textfont={"size": 10},
+                            colorbar=dict(title="Impact")
+                        ))
+                        
+                        fig_heatmap.update_layout(
+                            title='AOC Impact Decomposition by Segment',
+                            xaxis_title='Segment',
+                            yaxis_title='Impact Type',
+                            height=400,
+                            xaxis={'tickangle': -45}
+                        )
+                        
+                        st.plotly_chart(fig_heatmap, use_container_width=True)
+                        
+                        # Show summary statistics
+                        st.markdown("---")
+                        st.subheader("📊 Summary Statistics")
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Baseline", f"{df_aoc['Total_Baseline'].sum():,.0f}")
+                        with col2:
+                            st.metric("Total Current", f"{df_aoc['Total_Current'].sum():,.0f}")
+                        with col3:
+                            total_freq_all = df_aoc['Total_FreqImpact'].sum()
+                            st.metric("Total Freq Impact", f"{total_freq_all:+,.0f}")
+                        with col4:
+                            total_vol_all = df_aoc['Total_VolImpact'].sum()
+                            st.metric("Total Vol Impact", f"{total_vol_all:+,.0f}")
+                        
+                        # Show top movers
+                        st.markdown("---")
+                        st.subheader("🏆 Top Movers")
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown("**Top 5 Positive Changes**")
+                            top_positive = df_aoc.nlargest(5, 'Total_Change')[['Segment', 'Total_Change', 'Total_Change_Pct']]
+                            st.dataframe(top_positive.style.format({
+                                'Total_Change': '{:,.0f}',
+                                'Total_Change_Pct': '{:+.1f}%'
+                            }), hide_index=True)
+                        
+                        with col2:
+                            st.markdown("**Top 5 Negative Changes**")
+                            top_negative = df_aoc.nsmallest(5, 'Total_Change')[['Segment', 'Total_Change', 'Total_Change_Pct']]
+                            st.dataframe(top_negative.style.format({
+                                'Total_Change': '{:,.0f}',
+                                'Total_Change_Pct': '{:+.1f}%'
+                            }), hide_index=True)
 
 else:
     st.info("Please run forecasts for both scenarios to enable comparison.")
