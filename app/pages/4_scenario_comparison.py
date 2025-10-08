@@ -896,7 +896,7 @@ if policy_a is not None and policy_b is not None:
                 st.subheader("📈 Part 2: Remaining Forecast Change (> " + cutoff_b.strftime('%Y-%m-%d') + ")")
                 st.caption("Comparing how the remaining forecast has changed between baseline and current")
                 
-                baseline_forecast = claim_a_period[claim_a_period['dateReceived_EndOfMonth'] > cutoff_a]['clmNum_unique_'].sum()
+                baseline_forecast = claim_a_period[claim_a_period['dateReceived_EndOfMonth'] > cutoff_b]['clmNum_unique_'].sum()
                 aoc_forecast = claim_aoc_period[claim_aoc_period['dateReceived_EndOfMonth'] > cutoff_b]['clmNum_unique_'].sum()
                 current_forecast = claim_b_period[claim_b_period['dateReceived_EndOfMonth'] > cutoff_b]['clmNum_unique_'].sum()
                 
