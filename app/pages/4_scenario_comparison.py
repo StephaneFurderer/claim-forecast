@@ -1043,6 +1043,20 @@ if policy_a is not None and policy_b is not None:
                     (claim_b['dateReceived_EndOfMonth'] <= end_date)
                 ].copy()
                 
+                # Verification: Calculate totals for comparison
+                total_a_in_period = claim_a_period['clmNum_unique_'].sum()
+                total_b_in_period = claim_b_period['clmNum_unique_'].sum()
+                
+                st.markdown("---")
+                st.info(f"""
+                **📊 Total Claims in Selected Period ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}):**
+                - Scenario A (Baseline): {total_a_in_period:,.0f}
+                - Scenario B (Current): {total_b_in_period:,.0f}
+                - Change: {total_b_in_period - total_a_in_period:+,.0f}
+                
+                _(This should equal Part 1 Baseline + Part 2 Baseline for Scenario A)_
+                """)
+                
                 # Split into two parts based on cutoff_B
                 st.markdown("---")
                 
@@ -1149,6 +1163,15 @@ if policy_a is not None and policy_b is not None:
                 total_current = current_actual + current_forecast
                 total_freq_impact = freq_impact_actual + freq_impact_forecast
                 total_vol_impact = vol_impact_actual + vol_impact_forecast
+                
+                # Verification
+                baseline_matches = abs(total_baseline - total_a_in_period) < 0.01
+                current_matches = abs(total_current - total_b_in_period) < 0.01
+                
+                if baseline_matches and current_matches:
+                    st.success(f"✅ **Verification Passed:** Part 1 + Part 2 = Total | Baseline: {total_baseline:,.0f} = {total_a_in_period:,.0f} | Current: {total_current:,.0f} = {total_b_in_period:,.0f}")
+                else:
+                    st.error(f"⚠️ **Mismatch Detected!** | Baseline: {total_baseline:,.0f} ≠ {total_a_in_period:,.0f} (Δ={total_baseline - total_a_in_period:+,.0f}) | Current: {total_current:,.0f} ≠ {total_b_in_period:,.0f} (Δ={total_current - total_b_in_period:+,.0f})")
                 
                 col1, col2, col3 = st.columns(3)
                 with col1:
