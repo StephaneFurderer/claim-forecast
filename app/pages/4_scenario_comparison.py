@@ -314,7 +314,7 @@ if policy_a is not None and policy_b is not None:
     
     # Tabs for different comparisons
     st.markdown("---")
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Policy Count", "🎯 Frequency (Ultimate)", "📊 Reported Frequency", "📋 Claim Count"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Policy Count", "🎯 Frequency (Ultimate)", "📊 Reported Frequency", "📋 Claim Count", "🔄 AOC Analysis"])
     
     # Tab 1: Policy Count Comparison
     with tab1:
@@ -788,6 +788,176 @@ if policy_a is not None and policy_b is not None:
                     st.plotly_chart(fig_b, use_container_width=True)
         else:
             st.warning("Claim count data not available for comparison.")
+    
+    # Tab 5: AOC Analysis (Analysis of Change)
+    with tab5:
+        st.subheader("🔄 Analysis of Change (AOC)")
+        st.caption("Compare baseline vs current scenarios with frequency impact decomposition")
+        
+        # Check if AOC scenario exists in the situation
+        if 'aoc' not in scenarios[situation_a]:
+            st.warning("⚠️ AOC scenario not available for this situation. Please ensure 'aoc' scenario is defined in scenarios.json")
+        else:
+            # Load AOC scenario data
+            scenario_aoc_config = scenarios[situation_a]['aoc']
+            
+            st.info(f"""
+            **AOC Scenario Configuration:**
+            - Cutoff: {scenario_aoc_config['cutoff']} (same as baseline)
+            - Finance: {scenario_aoc_config['cutoff_finance']} (same as baseline)
+            - Frequency: {scenario_aoc_config['cutoff_frequency']} (same as current)
+            
+            This isolates the frequency effect by keeping policy assumptions from baseline but using frequency from current.
+            """)
+            
+            # Load AOC claim data
+            claim_aoc = load_claim_data(
+                segment, 
+                scenario_aoc_config['cutoff'], 
+                scenario_aoc_config['cutoff_finance'], 
+                scenario_aoc_config['cutoff_frequency']
+            )
+            
+            if claim_a is None or claim_b is None or claim_aoc is None:
+                st.error("⚠️ Missing claim forecast data. Please ensure baseline, current, and aoc scenarios have been forecasted.")
+            else:
+                # Get cutoff dates
+                cutoff_a = pd.Timestamp(scenario_a_config['cutoff'])
+                cutoff_b = pd.Timestamp(scenario_b_config['cutoff'])
+                
+                # Filter all scenarios to selected period
+                claim_a_period = claim_a[
+                    (claim_a['dateReceived_EndOfMonth'] >= start_date) & 
+                    (claim_a['dateReceived_EndOfMonth'] <= end_date)
+                ].copy()
+                
+                claim_aoc_period = claim_aoc[
+                    (claim_aoc['dateReceived_EndOfMonth'] >= start_date) & 
+                    (claim_aoc['dateReceived_EndOfMonth'] <= end_date)
+                ].copy()
+                
+                claim_b_period = claim_b[
+                    (claim_b['dateReceived_EndOfMonth'] >= start_date) & 
+                    (claim_b['dateReceived_EndOfMonth'] <= end_date)
+                ].copy()
+                
+                # Split into two parts based on cutoff_B
+                st.markdown("---")
+                
+                # Part 1: Actual vs Forecast (≤ cutoff_B)
+                st.subheader("📊 Part 1: Actual vs Forecast (≤ " + cutoff_b.strftime('%Y-%m-%d') + ")")
+                st.caption("Comparing actual observed claims (current) against what was forecasted (baseline)")
+                
+                baseline_actual = claim_a_period[claim_a_period['dateReceived_EndOfMonth'] <= cutoff_b]['clmNum_unique_'].sum()
+                aoc_actual = claim_aoc_period[claim_aoc_period['dateReceived_EndOfMonth'] <= cutoff_b]['clmNum_unique_'].sum()
+                current_actual = claim_b_period[claim_b_period['dateReceived_EndOfMonth'] <= cutoff_b]['clmNum_unique_'].sum()
+                
+                freq_impact_actual = aoc_actual - baseline_actual
+                vol_impact_actual = current_actual - aoc_actual
+                total_impact_actual = current_actual - baseline_actual
+                
+                # Waterfall chart for Part 1
+                fig_waterfall_1 = go.Figure(go.Waterfall(
+                    name="Actual vs Forecast",
+                    orientation="v",
+                    measure=["absolute", "relative", "relative", "total"],
+                    x=["Baseline<br>Forecast", "Frequency<br>Impact", "Volume<br>Impact", "Current<br>Actual"],
+                    y=[baseline_actual, freq_impact_actual, vol_impact_actual, total_impact_actual],
+                    text=[f"{baseline_actual:,.0f}", f"{freq_impact_actual:+,.0f}", f"{vol_impact_actual:+,.0f}", f"{current_actual:,.0f}"],
+                    textposition="outside",
+                    connector={"line": {"color": "rgb(63, 63, 63)"}},
+                ))
+                
+                fig_waterfall_1.update_layout(
+                    title="Claims Variance: Baseline Forecast → Current Actual",
+                    yaxis_title="Claim Count",
+                    showlegend=False,
+                    height=400
+                )
+                
+                st.plotly_chart(fig_waterfall_1, use_container_width=True)
+                
+                # Metrics for Part 1
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Baseline Forecast", f"{baseline_actual:,.0f}")
+                with col2:
+                    st.metric("Frequency Impact", f"{freq_impact_actual:+,.0f}", 
+                             f"{(freq_impact_actual/baseline_actual*100):+.1f}%" if baseline_actual > 0 else "N/A")
+                with col3:
+                    st.metric("Volume Impact", f"{vol_impact_actual:+,.0f}",
+                             f"{(vol_impact_actual/baseline_actual*100):+.1f}%" if baseline_actual > 0 else "N/A")
+                with col4:
+                    st.metric("Current Actual", f"{current_actual:,.0f}",
+                             f"{(total_impact_actual/baseline_actual*100):+.1f}%" if baseline_actual > 0 else "N/A")
+                
+                # Part 2: Forecast vs Forecast (> cutoff_B)
+                st.markdown("---")
+                st.subheader("📈 Part 2: Remaining Forecast Change (> " + cutoff_b.strftime('%Y-%m-%d') + ")")
+                st.caption("Comparing how the remaining forecast has changed between baseline and current")
+                
+                baseline_forecast = claim_a_period[claim_a_period['dateReceived_EndOfMonth'] > cutoff_a]['clmNum_unique_'].sum()
+                aoc_forecast = claim_aoc_period[claim_aoc_period['dateReceived_EndOfMonth'] > cutoff_b]['clmNum_unique_'].sum()
+                current_forecast = claim_b_period[claim_b_period['dateReceived_EndOfMonth'] > cutoff_b]['clmNum_unique_'].sum()
+                
+                freq_impact_forecast = aoc_forecast - baseline_forecast
+                vol_impact_forecast = current_forecast - aoc_forecast
+                total_impact_forecast = current_forecast - baseline_forecast
+                
+                # Waterfall chart for Part 2
+                fig_waterfall_2 = go.Figure(go.Waterfall(
+                    name="Forecast Change",
+                    orientation="v",
+                    measure=["absolute", "relative", "relative", "total"],
+                    x=["Baseline<br>Remaining", "Frequency<br>Impact", "Volume<br>Impact", "Current<br>Remaining"],
+                    y=[baseline_forecast, freq_impact_forecast, vol_impact_forecast, total_impact_forecast],
+                    text=[f"{baseline_forecast:,.0f}", f"{freq_impact_forecast:+,.0f}", f"{vol_impact_forecast:+,.0f}", f"{current_forecast:,.0f}"],
+                    textposition="outside",
+                    connector={"line": {"color": "rgb(63, 63, 63)"}},
+                ))
+                
+                fig_waterfall_2.update_layout(
+                    title="Remaining Claims Forecast Change",
+                    yaxis_title="Claim Count",
+                    showlegend=False,
+                    height=400
+                )
+                
+                st.plotly_chart(fig_waterfall_2, use_container_width=True)
+                
+                # Metrics for Part 2
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Baseline Remaining", f"{baseline_forecast:,.0f}")
+                with col2:
+                    st.metric("Frequency Impact", f"{freq_impact_forecast:+,.0f}",
+                             f"{(freq_impact_forecast/baseline_forecast*100):+.1f}%" if baseline_forecast > 0 else "N/A")
+                with col3:
+                    st.metric("Volume Impact", f"{vol_impact_forecast:+,.0f}",
+                             f"{(vol_impact_forecast/baseline_forecast*100):+.1f}%" if baseline_forecast > 0 else "N/A")
+                with col4:
+                    st.metric("Current Remaining", f"{current_forecast:,.0f}",
+                             f"{(total_impact_forecast/baseline_forecast*100):+.1f}%" if baseline_forecast > 0 else "N/A")
+                
+                # Summary section
+                st.markdown("---")
+                st.subheader("📋 Total Period Summary")
+                
+                total_baseline = baseline_actual + baseline_forecast
+                total_current = current_actual + current_forecast
+                total_freq_impact = freq_impact_actual + freq_impact_forecast
+                total_vol_impact = vol_impact_actual + vol_impact_forecast
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Change", f"{(total_current - total_baseline):+,.0f}",
+                             f"{((total_current - total_baseline)/total_baseline*100):+.1f}%" if total_baseline > 0 else "N/A")
+                with col2:
+                    st.metric("Total Frequency Impact", f"{total_freq_impact:+,.0f}",
+                             f"{(total_freq_impact/total_baseline*100):+.1f}%" if total_baseline > 0 else "N/A")
+                with col3:
+                    st.metric("Total Volume Impact", f"{total_vol_impact:+,.0f}",
+                             f"{(total_vol_impact/total_baseline*100):+.1f}%" if total_baseline > 0 else "N/A")
 
 else:
     st.info("Please run forecasts for both scenarios to enable comparison.")
