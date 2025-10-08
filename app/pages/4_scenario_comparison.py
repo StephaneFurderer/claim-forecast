@@ -708,6 +708,116 @@ if policy_a is not None and policy_b is not None:
                 st.error("Could not compute reported frequency. Please check data availability.")
         else:
             st.warning("⚠️ Raw data not available for reported frequency calculation. Make sure backup data exists for the selected cutoff dates.")
+        
+        # Frequency Assumptions Comparison Table
+        st.markdown("---")
+        st.subheader("📋 Ultimate Frequency Assumptions by Scenario")
+        st.caption("Comparing frequency assumptions between baseline and current scenarios. Blue = Model, Red = Manual override")
+        
+        # Load best_frequencies.csv
+        freq_path = config.get_frequency_results_path() / 'best_frequencies.csv'
+        if freq_path.exists():
+            best_freq_df = pd.read_csv(freq_path)
+            best_freq_df['cutoff'] = pd.to_datetime(best_freq_df['cutoff'])
+            best_freq_df['dateDepart_EndOfMonth'] = pd.to_datetime(best_freq_df['dateDepart_EndOfMonth'])
+            
+            # Filter for Scenario A (baseline) and Scenario B (current)
+            cutoff_a = pd.Timestamp(scenario_a_config['cutoff_frequency'])
+            cutoff_b = pd.Timestamp(scenario_b_config['cutoff_frequency'])
+            
+            baseline_freq = best_freq_df[
+                (best_freq_df['cutoff'] == cutoff_a) & 
+                (best_freq_df['segment'] == segment)
+            ][['segment', 'dateDepart_EndOfMonth', 'year', 'month', 'source', 'best_frequency']].copy()
+            baseline_freq.columns = ['segment', 'dateDepart_EndOfMonth', 'year', 'month', 'baseline_source', 'baseline_best_frequency']
+            
+            current_freq = best_freq_df[
+                (best_freq_df['cutoff'] == cutoff_b) & 
+                (best_freq_df['segment'] == segment)
+            ][['segment', 'dateDepart_EndOfMonth', 'year', 'month', 'source', 'best_frequency']].copy()
+            current_freq.columns = ['segment', 'dateDepart_EndOfMonth', 'year', 'month', 'current_source', 'current_best_frequency']
+            
+            if not baseline_freq.empty and not current_freq.empty:
+                # Merge baseline and current
+                comparison_df = baseline_freq.merge(
+                    current_freq[['dateDepart_EndOfMonth', 'current_source', 'current_best_frequency']], 
+                    on='dateDepart_EndOfMonth', 
+                    how='outer'
+                ).sort_values('dateDepart_EndOfMonth')
+                
+                # Fill NaN in segment column
+                comparison_df['segment'] = comparison_df['segment'].fillna(segment)
+                
+                # Calculate difference
+                comparison_df['difference'] = comparison_df['current_best_frequency'] - comparison_df['baseline_best_frequency']
+                comparison_df['difference_pct'] = (comparison_df['difference'] / comparison_df['baseline_best_frequency'] * 100).round(2)
+                
+                # Format date for display
+                comparison_df['Year-Month'] = comparison_df['dateDepart_EndOfMonth'].dt.strftime('%Y-%m')
+                
+                # Reorder columns for display
+                display_df = comparison_df[[
+                    'Year-Month',
+                    'baseline_source', 'baseline_best_frequency',
+                    'current_source', 'current_best_frequency',
+                    'difference', 'difference_pct'
+                ]].copy()
+                
+                # Apply color styling
+                def color_source(val):
+                    if val == 'model':
+                        return 'background-color: #d4e6f1; color: black'  # Light blue
+                    elif val == 'manual':
+                        return 'background-color: #f5b7b1; color: black'  # Light red
+                    else:
+                        return ''
+                
+                def color_frequency(row):
+                    styles = [''] * len(row)
+                    if row['baseline_source'] == 'model':
+                        styles[1] = 'background-color: #d4e6f1; color: black'  # baseline_source
+                        styles[2] = 'background-color: #d4e6f1; color: black'  # baseline_best_frequency
+                    elif row['baseline_source'] == 'manual':
+                        styles[1] = 'background-color: #f5b7b1; color: black'
+                        styles[2] = 'background-color: #f5b7b1; color: black'
+                    
+                    if row['current_source'] == 'model':
+                        styles[3] = 'background-color: #d4e6f1; color: black'  # current_source
+                        styles[4] = 'background-color: #d4e6f1; color: black'  # current_best_frequency
+                    elif row['current_source'] == 'manual':
+                        styles[3] = 'background-color: #f5b7b1; color: black'
+                        styles[4] = 'background-color: #f5b7b1; color: black'
+                    
+                    return styles
+                
+                styled_df = display_df.style.apply(color_frequency, axis=1).format({
+                    'baseline_best_frequency': '{:.6f}',
+                    'current_best_frequency': '{:.6f}',
+                    'difference': '{:+.6f}',
+                    'difference_pct': '{:+.2f}%'
+                })
+                
+                st.dataframe(styled_df, use_container_width=True, height=600)
+                
+                # Summary statistics
+                st.markdown("---")
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    baseline_manual_count = (comparison_df['baseline_source'] == 'manual').sum()
+                    st.metric("Baseline Manual Overrides", baseline_manual_count)
+                with col2:
+                    current_manual_count = (comparison_df['current_source'] == 'manual').sum()
+                    st.metric("Current Manual Overrides", current_manual_count)
+                with col3:
+                    avg_diff = comparison_df['difference'].mean()
+                    st.metric("Avg Difference", f"{avg_diff:+.6f}")
+                with col4:
+                    avg_diff_pct = comparison_df['difference_pct'].mean()
+                    st.metric("Avg % Change", f"{avg_diff_pct:+.2f}%")
+            else:
+                st.warning(f"No frequency data found for segment '{segment}' with the selected cutoff dates.")
+        else:
+            st.error("best_frequencies.csv not found. Please run the frequency development dashboard first.")
     
     # Tab 4: Claim Count Comparison
     with tab4:
