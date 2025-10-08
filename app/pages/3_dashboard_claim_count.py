@@ -218,6 +218,16 @@ def load_data_backup_tripmate(cutoff_date:str):
 # get claims data
 
 
+# Cache Management - Clear All Cache Button
+with st.sidebar:
+    st.markdown("### 🔧 System Controls")
+    if st.button("🗑️ Clear All Cache", key="clear_cache_btn"):
+        if st.button("⚠️ Confirm Clear Cache", key="confirm_clear"):
+            st.cache_data.clear()
+            st.success("✅ All cache cleared! App will reboot.")
+            st.rerun()
+    st.markdown("---")
+
 st.sidebar.title("Controls")
 
 situation = st.sidebar.selectbox("situation under analysis",scenarios.keys(),index=0)

@@ -10,6 +10,16 @@ st.set_page_config(
     layout="wide"
 )
 
+# Cache Management - Clear All Cache Button
+with st.sidebar:
+    st.markdown("### 🔧 System Controls")
+    if st.button("🗑️ Clear All Cache", key="clear_cache_btn"):
+        if st.button("⚠️ Confirm Clear Cache", key="confirm_clear"):
+            st.cache_data.clear()
+            st.success("✅ All cache cleared! App will reboot.")
+            st.rerun()
+    st.markdown("---")
+
 # Title and introduction
 st.title("📊 Claim Count Forecast: Long Term Model")
 st.markdown("### Welcome to the Claims Forecasting Platform")

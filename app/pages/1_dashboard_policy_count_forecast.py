@@ -137,6 +137,16 @@ def _compute_yoy_table(policy_df:pd.DataFrame,end_valid_date:str):
             growth_table = pd.merge(yearly[[DEPARTURE_YEAR, POLICY_COUNT, 'YoY_growth']], ytd[[DEPARTURE_YEAR, 'YTD_growth']], on=DEPARTURE_YEAR)
             return growth_table
 
+# Cache Management - Clear All Cache Button
+with st.sidebar:
+    st.markdown("### 🔧 System Controls")
+    if st.button("🗑️ Clear All Cache", key="clear_cache_btn"):
+        if st.button("⚠️ Confirm Clear Cache", key="confirm_clear"):
+            st.cache_data.clear()
+            st.success("✅ All cache cleared! App will reboot.")
+            st.rerun()
+    st.markdown("---")
+
 st.sidebar.title("Controls")
 
 block = st.sidebar.selectbox("CSA/TM",["CSA","TM"],index=0)
