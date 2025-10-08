@@ -82,21 +82,13 @@ def load_raw_data_for_reported_freq(segment, cutoff):
     backup_csa_path = str(config.BACKUP_MODE_CSA_PATH) + "\\"
     backup_tm_path = str(config.BACKUP_MODE_TM_PATH) + "\\"
     
-    # TripMate segments (adjust list as needed)
-    tm_segments = ['TripMate', 'Tripmate']  # Add other TM segments if needed
+    # Try both CSA and TM - the segment will exist in one of them
+    backup_configs = [
+        (backup_csa_path, fd.load_data_backup, "CSA"),
+        (backup_tm_path, fd.load_data_backup_tripmate, "TM")
+    ]
     
-    # Determine which loader to use based on segment
-    if segment in tm_segments:
-        # Try TripMate loader
-        backup_paths = [(backup_tm_path, "TM", fd.load_data_backup_tripmate)]
-    else:
-        # Try CSA loader first, then TM as fallback
-        backup_paths = [
-            (backup_csa_path, "CSA", fd.load_data_backup),
-            (backup_tm_path, "TM", fd.load_data_backup_tripmate)
-        ]
-    
-    for backup_path, block_type, loader_func in backup_paths:
+    for backup_path, loader_func, block_type in backup_configs:
         # Check if cutoff date folder exists
         date_folder = os.path.join(backup_path, cutoff)
         if not os.path.exists(date_folder):
@@ -106,6 +98,10 @@ def load_raw_data_for_reported_freq(segment, cutoff):
             # Load data using appropriate loader
             policies_df, claims_df = loader_func(cutoff, backup_root=backup_path)
             
+            # Check if segment exists in this dataset
+            if segment not in policies_df['segment'].unique():
+                continue
+            
             # Filter to segment
             policies_seg = policies_df[policies_df['segment'] == segment].copy()
             claims_seg = claims_df[claims_df['segment'] == segment].copy()
@@ -113,6 +109,7 @@ def load_raw_data_for_reported_freq(segment, cutoff):
             if not policies_seg.empty and not claims_seg.empty:
                 return policies_seg, claims_seg
         except Exception as e:
+            # If loading fails, try next backup path
             continue
     
     return None, None
