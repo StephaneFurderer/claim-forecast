@@ -739,6 +739,13 @@ if policy_a is not None and policy_b is not None:
             
             # Get reported frequency from cached computation (if available)
             try:
+                baseline_reported = freq_comparison_a[['dateDepart_EndOfMonth', 'reported_frequency']].copy()
+                baseline_reported.columns = ['dateDepart_EndOfMonth', 'baseline_reported']
+            except (NameError, KeyError):
+                # If not available, create empty dataframe
+                baseline_reported = pd.DataFrame(columns=['dateDepart_EndOfMonth', 'baseline_reported'])
+            
+            try:
                 current_reported = freq_comparison_b[['dateDepart_EndOfMonth', 'reported_frequency']].copy()
                 current_reported.columns = ['dateDepart_EndOfMonth', 'current_reported']
             except (NameError, KeyError):
@@ -746,12 +753,22 @@ if policy_a is not None and policy_b is not None:
                 current_reported = pd.DataFrame(columns=['dateDepart_EndOfMonth', 'current_reported'])
             
             if not baseline_freq.empty and not current_freq.empty:
-                # Merge baseline, current ultimate, and current reported
+                # Merge baseline ultimate and current ultimate
                 comparison_df = baseline_freq.merge(
                     current_freq[['dateDepart_EndOfMonth', 'current_source', 'current_best_frequency']], 
                     on='dateDepart_EndOfMonth', 
                     how='outer'
                 )
+                
+                # Merge with baseline reported frequency
+                if not baseline_reported.empty:
+                    comparison_df = comparison_df.merge(
+                        baseline_reported,
+                        on='dateDepart_EndOfMonth',
+                        how='left'
+                    )
+                else:
+                    comparison_df['baseline_reported'] = None
                 
                 # Merge with current reported frequency
                 if not current_reported.empty:
@@ -778,6 +795,7 @@ if policy_a is not None and policy_b is not None:
                 # Reorder columns for display
                 display_df = comparison_df[[
                     'Year-Month',
+                    'baseline_reported',
                     'baseline_source', 'baseline_best_frequency',
                     'current_reported',
                     'current_source', 'current_best_frequency',
@@ -789,27 +807,33 @@ if policy_a is not None and policy_b is not None:
                 def color_frequency(row):
                     styles = [''] * len(row)
                     
-                    # Baseline source and frequency (columns 1, 2)
+                    # Column 0: Year-Month - no styling
+                    # Column 1: baseline_reported - white, no styling
+                    
+                    # Baseline source and frequency (columns 2, 3)
                     if row['baseline_source'] == 'model':
-                        styles[1] = 'background-color: #e8e8e8; color: black'  # Light Gray
-                        styles[2] = 'background-color: #e8e8e8; color: black'
+                        styles[2] = 'background-color: #e8e8e8; color: black'  # Light Gray
+                        styles[3] = 'background-color: #e8e8e8; color: black'
                     elif row['baseline_source'] == 'manual':
-                        styles[1] = 'background-color: #fff3cd; color: black'  # Light Amber
-                        styles[2] = 'background-color: #fff3cd; color: black'
+                        styles[2] = 'background-color: #fff3cd; color: black'  # Light Amber
+                        styles[3] = 'background-color: #fff3cd; color: black'
                     
-                    # current_reported stays white (column 3 - no styling)
+                    # Column 4: current_reported - white, no styling
                     
-                    # Current source and frequency (columns 4, 5)
+                    # Current source and frequency (columns 5, 6)
                     if row['current_source'] == 'model':
-                        styles[4] = 'background-color: #e8e8e8; color: black'  # Light Gray
-                        styles[5] = 'background-color: #e8e8e8; color: black'
+                        styles[5] = 'background-color: #e8e8e8; color: black'  # Light Gray
+                        styles[6] = 'background-color: #e8e8e8; color: black'
                     elif row['current_source'] == 'manual':
-                        styles[4] = 'background-color: #fff3cd; color: black'  # Light Amber
-                        styles[5] = 'background-color: #fff3cd; color: black'
+                        styles[5] = 'background-color: #fff3cd; color: black'  # Light Amber
+                        styles[6] = 'background-color: #fff3cd; color: black'
+                    
+                    # Columns 7, 8: difference columns - no styling
                     
                     return styles
                 
                 # Convert frequencies to percentages for display
+                display_df['baseline_reported'] = display_df['baseline_reported'] * 100
                 display_df['baseline_best_frequency'] = display_df['baseline_best_frequency'] * 100
                 display_df['current_reported'] = display_df['current_reported'] * 100
                 display_df['current_best_frequency'] = display_df['current_best_frequency'] * 100
@@ -817,6 +841,7 @@ if policy_a is not None and policy_b is not None:
                 display_df['difference_reported_vs_baseline_ultimate'] = display_df['difference_reported_vs_baseline_ultimate'] * 100
                 
                 styled_df = display_df.style.apply(color_frequency, axis=1).format({
+                    'baseline_reported': '{:.3f}%',
                     'baseline_best_frequency': '{:.3f}%',
                     'current_reported': '{:.3f}%',
                     'current_best_frequency': '{:.3f}%',
