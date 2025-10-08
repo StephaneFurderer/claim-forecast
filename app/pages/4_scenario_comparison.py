@@ -207,19 +207,40 @@ if policy_a is not None and policy_b is not None:
     st.sidebar.markdown("---")
     st.sidebar.subheader("Analysis Period")
     
+    # Get data date ranges
     min_date_a = policy_a['dateDepart_EndOfMonth'].min()
     max_date_a = policy_a['dateDepart_EndOfMonth'].max()
     min_date_b = policy_b['dateDepart_EndOfMonth'].min()
     max_date_b = policy_b['dateDepart_EndOfMonth'].max()
     
-    min_date = min(min_date_a, min_date_b)
-    max_date = max(max_date_a, max_date_b)
+    # Calculate absolute min/max from data
+    absolute_min_date = min(min_date_a, min_date_b)
+    absolute_max_date = max(max_date_a, max_date_b)
+    
+    # Calculate default range based on scenario dates
+    # Start: 6 months before the min of scenario A's cutoff dates
+    scenario_a_min_date = min(
+        pd.Timestamp(scenario_a_config['cutoff']),
+        pd.Timestamp(scenario_a_config['cutoff_finance']),
+        pd.Timestamp(scenario_a_config['cutoff_frequency'])
+    )
+    default_start = scenario_a_min_date - pd.DateOffset(months=6)
+    default_start = max(default_start, absolute_min_date)  # Don't go before data starts
+    
+    # End: 3 months after the max of scenario B's cutoff dates
+    scenario_b_max_date = max(
+        pd.Timestamp(scenario_b_config['cutoff']),
+        pd.Timestamp(scenario_b_config['cutoff_finance']),
+        pd.Timestamp(scenario_b_config['cutoff_frequency'])
+    )
+    default_end = scenario_b_max_date + pd.DateOffset(months=3)
+    default_end = min(default_end, absolute_max_date)  # Don't go beyond data ends
     
     date_range = st.sidebar.date_input(
         "Select Period",
-        value=(min_date, max_date),
-        min_value=min_date,
-        max_value=max_date
+        value=(default_start, default_end),
+        min_value=absolute_min_date,
+        max_value=absolute_max_date
     )
     
     if len(date_range) == 2:
