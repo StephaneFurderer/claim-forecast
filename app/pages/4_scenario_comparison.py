@@ -541,7 +541,16 @@ if policy_a is not None and policy_b is not None:
                 # Show comparison with ultimate frequency if available
                 if frequency_a is not None and frequency_b is not None:
                     st.markdown("---")
-                    st.subheader("📊 Reported vs Ultimate Frequency - All Scenarios")
+                    st.subheader("📊 Reported vs Ultimate Frequency")
+                    
+                    # View selector for this specific section
+                    freq_view_mode = st.radio(
+                        "View Mode", 
+                        ["Overlay (All 4 Lines)", "Side-by-Side (Per Scenario)"], 
+                        index=0,
+                        horizontal=True,
+                        key="freq_comparison_view"
+                    )
                     
                     # Merge reported and ultimate for both scenarios
                     freq_comparison_a = pd.merge(
@@ -566,61 +575,106 @@ if policy_a is not None and policy_b is not None:
                         (freq_comparison_b['dateDepart_EndOfMonth'] <= end_date)
                     ]
                     
-                    # Create single chart with all 4 lines
-                    fig_all = go.Figure()
-                    
-                    # Scenario A - Reported (solid blue)
-                    fig_all.add_trace(go.Scatter(
-                        x=freq_comparison_a['dateDepart_EndOfMonth'],
-                        y=freq_comparison_a['reported_frequency'],
-                        mode='lines',
-                        name=f'A: {scenario_a} - Reported',
-                        line=dict(color='#636EFA', width=2.5)
-                    ))
-                    
-                    # Scenario A - Ultimate (dashed blue)
-                    fig_all.add_trace(go.Scatter(
-                        x=freq_comparison_a['dateDepart_EndOfMonth'],
-                        y=freq_comparison_a['best_frequency'],
-                        mode='lines',
-                        name=f'A: {scenario_a} - Ultimate',
-                        line=dict(color='#636EFA', width=2.5, dash='dash')
-                    ))
-                    
-                    # Scenario B - Reported (solid red)
-                    fig_all.add_trace(go.Scatter(
-                        x=freq_comparison_b['dateDepart_EndOfMonth'],
-                        y=freq_comparison_b['reported_frequency'],
-                        mode='lines',
-                        name=f'B: {scenario_b} - Reported',
-                        line=dict(color='#EF553B', width=2.5)
-                    ))
-                    
-                    # Scenario B - Ultimate (dashed red)
-                    fig_all.add_trace(go.Scatter(
-                        x=freq_comparison_b['dateDepart_EndOfMonth'],
-                        y=freq_comparison_b['best_frequency'],
-                        mode='lines',
-                        name=f'B: {scenario_b} - Ultimate',
-                        line=dict(color='#EF553B', width=2.5, dash='dash')
-                    ))
-                    
-                    fig_all.update_layout(
-                        xaxis_title='Departure Date',
-                        yaxis_title='Frequency',
-                        hovermode='x unified',
-                        height=500,
-                        showlegend=True,
-                        legend=dict(
-                            yanchor="top", 
-                            y=0.99, 
-                            xanchor="right", 
-                            x=0.99,
-                            bgcolor="rgba(255, 255, 255, 0.8)"
+                    if freq_view_mode == "Overlay (All 4 Lines)":
+                        # Create single chart with all 4 lines
+                        fig_all = go.Figure()
+                        
+                        # Scenario A - Reported (solid blue)
+                        fig_all.add_trace(go.Scatter(
+                            x=freq_comparison_a['dateDepart_EndOfMonth'],
+                            y=freq_comparison_a['reported_frequency'],
+                            mode='lines',
+                            name=f'A: {scenario_a} - Reported',
+                            line=dict(color='#636EFA', width=2.5)
+                        ))
+                        
+                        # Scenario A - Ultimate (dashed blue)
+                        fig_all.add_trace(go.Scatter(
+                            x=freq_comparison_a['dateDepart_EndOfMonth'],
+                            y=freq_comparison_a['best_frequency'],
+                            mode='lines',
+                            name=f'A: {scenario_a} - Ultimate',
+                            line=dict(color='#636EFA', width=2.5, dash='dash')
+                        ))
+                        
+                        # Scenario B - Reported (solid red)
+                        fig_all.add_trace(go.Scatter(
+                            x=freq_comparison_b['dateDepart_EndOfMonth'],
+                            y=freq_comparison_b['reported_frequency'],
+                            mode='lines',
+                            name=f'B: {scenario_b} - Reported',
+                            line=dict(color='#EF553B', width=2.5)
+                        ))
+                        
+                        # Scenario B - Ultimate (dashed red)
+                        fig_all.add_trace(go.Scatter(
+                            x=freq_comparison_b['dateDepart_EndOfMonth'],
+                            y=freq_comparison_b['best_frequency'],
+                            mode='lines',
+                            name=f'B: {scenario_b} - Ultimate',
+                            line=dict(color='#EF553B', width=2.5, dash='dash')
+                        ))
+                        
+                        fig_all.update_layout(
+                            xaxis_title='Departure Date',
+                            yaxis_title='Frequency',
+                            hovermode='x unified',
+                            height=500
                         )
-                    )
+                        
+                        st.plotly_chart(fig_all, use_container_width=True)
                     
-                    st.plotly_chart(fig_all, use_container_width=True)
+                    else:
+                        # Side-by-side view showing gap between reported and ultimate
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown(f"**Scenario A: {scenario_a}**")
+                            fig_comp_a = go.Figure()
+                            fig_comp_a.add_trace(go.Scatter(
+                                x=freq_comparison_a['dateDepart_EndOfMonth'],
+                                y=freq_comparison_a['reported_frequency'],
+                                mode='lines',
+                                name='Reported (Observed)',
+                                line=dict(color='#636EFA', width=2)
+                            ))
+                            fig_comp_a.add_trace(go.Scatter(
+                                x=freq_comparison_a['dateDepart_EndOfMonth'],
+                                y=freq_comparison_a['best_frequency'],
+                                mode='lines',
+                                name='Ultimate (Target)',
+                                line=dict(color='#00CC96', width=2, dash='dash')
+                            ))
+                            fig_comp_a.update_layout(
+                                xaxis_title='Departure Date',
+                                yaxis_title='Frequency',
+                                height=400
+                            )
+                            st.plotly_chart(fig_comp_a, use_container_width=True)
+                        
+                        with col2:
+                            st.markdown(f"**Scenario B: {scenario_b}**")
+                            fig_comp_b = go.Figure()
+                            fig_comp_b.add_trace(go.Scatter(
+                                x=freq_comparison_b['dateDepart_EndOfMonth'],
+                                y=freq_comparison_b['reported_frequency'],
+                                mode='lines',
+                                name='Reported (Observed)',
+                                line=dict(color='#EF553B', width=2)
+                            ))
+                            fig_comp_b.add_trace(go.Scatter(
+                                x=freq_comparison_b['dateDepart_EndOfMonth'],
+                                y=freq_comparison_b['best_frequency'],
+                                mode='lines',
+                                name='Ultimate (Target)',
+                                line=dict(color='#00CC96', width=2, dash='dash')
+                            ))
+                            fig_comp_b.update_layout(
+                                xaxis_title='Departure Date',
+                                yaxis_title='Frequency',
+                                height=400
+                            )
+                            st.plotly_chart(fig_comp_b, use_container_width=True)
             else:
                 st.error("Could not compute reported frequency. Please check data availability.")
         else:
