@@ -82,18 +82,29 @@ def load_raw_data_for_reported_freq(segment, cutoff):
     backup_csa_path = str(config.BACKUP_MODE_CSA_PATH) + "\\"
     backup_tm_path = str(config.BACKUP_MODE_TM_PATH) + "\\"
     
-    # Try CSA first, then TM
-    backup_paths = [(backup_csa_path, "CSA"), (backup_tm_path, "TM")]
+    # TripMate segments (adjust list as needed)
+    tm_segments = ['TripMate', 'Tripmate']  # Add other TM segments if needed
     
-    for backup_path, block_type in backup_paths:
+    # Determine which loader to use based on segment
+    if segment in tm_segments:
+        # Try TripMate loader
+        backup_paths = [(backup_tm_path, "TM", fd.load_data_backup_tripmate)]
+    else:
+        # Try CSA loader first, then TM as fallback
+        backup_paths = [
+            (backup_csa_path, "CSA", fd.load_data_backup),
+            (backup_tm_path, "TM", fd.load_data_backup_tripmate)
+        ]
+    
+    for backup_path, block_type, loader_func in backup_paths:
         # Check if cutoff date folder exists
         date_folder = os.path.join(backup_path, cutoff)
         if not os.path.exists(date_folder):
             continue
         
         try:
-            # Load data using frequency_development's backup loader
-            policies_df, claims_df = fd.load_data_backup(cutoff, backup_root=backup_path)
+            # Load data using appropriate loader
+            policies_df, claims_df = loader_func(cutoff, backup_root=backup_path)
             
             # Filter to segment
             policies_seg = policies_df[policies_df['segment'] == segment].copy()
