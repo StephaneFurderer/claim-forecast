@@ -28,9 +28,16 @@ def load_policy_data(segment, cutoff, cutoff_finance):
     if not path.exists():
         return None
     df = pd.read_csv(path)
-    df['cutoff'] = pd.to_datetime(df['cutoff'])
-    df['cutoff_finance'] = pd.to_datetime(df['cutoff_finance'])
-    df['dateDepart_EndOfMonth'] = pd.to_datetime(df['dateDepart_EndOfMonth'])
+    
+    # Parse dates with error handling
+    try:
+        df['cutoff'] = pd.to_datetime(df['cutoff'], errors='coerce')
+        df['cutoff_finance'] = pd.to_datetime(df['cutoff_finance'], errors='coerce')
+        df['dateDepart_EndOfMonth'] = pd.to_datetime(df['dateDepart_EndOfMonth'], errors='coerce')
+    except Exception as e:
+        st.error(f"Error parsing dates in pol_count_per_dep_.csv: {e}")
+        st.write("First few rows:", df.head())
+        raise
     
     filtered = df[
         (df['segment'] == segment) & 
